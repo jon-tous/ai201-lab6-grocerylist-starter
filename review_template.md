@@ -55,43 +55,33 @@ The live behavior showed that the endpoint overwrites existing purchase history,
 ## PR #2 — List Stats (`pr2_list_stats.py`)
 
 ### Summary
-*What does this PR do? (1–2 sentences in your own words)*
-
->
+This PR adds a stats endpoint for the active shopping view so the frontend can show how many items remain and how those remaining items are distributed by category. The implementation is close in spirit, but it does not match the frontend request in a couple of important ways.
 
 ### Issues
 
 **Issue 1**
-- Location:
-- What's wrong:
-- Why it matters:
-- Suggested fix:
+- Location: [prs/pr2_list_stats.py](prs/pr2_list_stats.py), `get_list_stats()`
+- What's wrong: The `by_category` breakdown is computed from all items in the list, not just the unpurchased items that are still remaining. In the live test, the endpoint returned `by_category` values summing to `8`, while `remaining` was `0`.
+- Why it matters: This breaks the frontend use case. A shopper viewing the active list needs to see what is still left to buy by section, not a count of everything that has ever been on the list.
+- Suggested fix: Build the category breakdown from the remaining/unpurchased items only, so that `sum(by_category.values())` matches `remaining` and the frontend can display accurate shopping guidance.
 
 **Issue 2**
-- Location:
-- What's wrong:
-- Why it matters:
-- Suggested fix:
-
-**Issue 3** *(if found)*
-- Location:
-- What's wrong:
-- Why it matters:
-- Suggested fix:
+- Location: [prs/pr2_list_stats.py](prs/pr2_list_stats.py), `list_stats()` / `get_list_stats()`
+- What's wrong: The endpoint returns `200 OK` with zeroed-out stats for a non-existent list ID instead of failing like the existing items endpoint does. The live test showed `{"error":"List 'bad-list-id' not found"}` for `GET /lists/<list_id>/items`, but the stats route returned `200` with empty stats.
+- Why it matters: Inconsistent error handling makes the API harder to reason about and can cause downstream clients to silently treat missing data as a valid empty list.
+- Suggested fix: Check whether the list exists before computing stats and return a `404` response (with an error payload) when it does not.
 
 ### Questions for the Author
-*A good code review often surfaces design questions, not just bugs. What would you want to clarify before approving?*
-
->
+- Should the category breakdown represent only unpurchased items, or is the intention to show the full history of the list by category?
+- Do you want the stats endpoint to match the existing list-items route’s error semantics and return `404` for unknown list IDs?
 
 ### Verdict
 - [ ] Approve — ship it
-- [ ] Request Changes — needs fixes before merging
+- [x] Request Changes — needs fixes before merging
 - [ ] Comment — needs discussion before a verdict
 
 **Rationale** *(1–2 sentences)*:
-
->
+The category breakdown is semantically wrong for the frontend’s “what remains to buy” use case, and the missing-list behavior is inconsistent with the rest of the API. I would request changes before approving.
 
 ---
 
